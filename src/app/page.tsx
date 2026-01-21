@@ -1,65 +1,143 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import ExerciseAccordion, {
+  ExerciseEntry,
+  SetEntry,
+} from "./components/ExerciseAccordion";
+import SaveWorkoutButton from "./components/SaveWorkoutButton";
+import WorkoutSelector from "./components/WorkoutSelector";
+import { EXERCISES } from "./lib/exercises";
 
 export default function Home() {
+  const workoutOptions = [
+    { id: "full-body-a", label: "Full Body A" },
+    { id: "upper-push", label: "Upper Push" },
+    { id: "lower-focus", label: "Lower Focus" },
+  ];
+
+  const initialExercises: ExerciseEntry[] = EXERCISES.map(
+    (exercise, index) => ({
+      id: exercise.id,
+      name: exercise.name,
+      sets: [
+        {
+          id: `${exercise.id}-set-1`,
+          weight: 8 + index * 2,
+          reps: 12,
+        },
+        {
+          id: `${exercise.id}-set-2`,
+          weight: 10 + index * 2,
+          reps: 10,
+        },
+      ],
+    })
+  );
+
+  const [workoutId, setWorkoutId] = useState(workoutOptions[0].id);
+  const [exercises, setExercises] = useState<ExerciseEntry[]>(
+    initialExercises
+  );
+
+  const handleSetChange = (
+    exerciseId: string,
+    setId: string,
+    field: "weight" | "reps",
+    value: number
+  ) => {
+    setExercises((prevExercises) =>
+      prevExercises.map((exercise) => {
+        if (exercise.id !== exerciseId) {
+          return exercise;
+        }
+
+        return {
+          ...exercise,
+          sets: exercise.sets.map((set) =>
+            set.id === setId ? { ...set, [field]: value } : set
+          ),
+        };
+      })
+    );
+  };
+
+  const handleAddSet = (exerciseId: string) => {
+    setExercises((prevExercises) =>
+      prevExercises.map((exercise) => {
+        if (exercise.id !== exerciseId) {
+          return exercise;
+        }
+
+        const lastSet = exercise.sets[exercise.sets.length - 1];
+        const newSet: SetEntry = {
+          id: `${exerciseId}-set-${Date.now()}`,
+          weight: lastSet?.weight ?? 10,
+          reps: lastSet?.reps ?? 8,
+        };
+
+        return {
+          ...exercise,
+          sets: [...exercise.sets, newSet],
+        };
+      })
+    );
+  };
+
+  const handleRemoveSet = (exerciseId: string, setId: string) => {
+    setExercises((prevExercises) =>
+      prevExercises.map((exercise) => {
+        if (exercise.id !== exerciseId) {
+          return exercise;
+        }
+
+        return {
+          ...exercise,
+          sets: exercise.sets.filter((set) => set.id !== setId),
+        };
+      })
+    );
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <div className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-emerald-200/40 blur-3xl dark:bg-emerald-400/20" />
+      <div className="pointer-events-none absolute -bottom-40 left-0 h-72 w-72 rounded-full bg-orange-200/50 blur-3xl dark:bg-orange-400/20" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),_rgba(255,255,255,0))] dark:bg-[radial-gradient(circle_at_top,_rgba(39,39,42,0.6),_rgba(9,9,11,0))]" />
+
+      <main className="relative z-10 mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 pb-28 pt-8 font-sans sm:px-6">
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600/80 dark:text-emerald-400/80">
+              Active workout
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+              Session builder
+            </h1>
+            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+              Stay focused, log each set in under a minute.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200/70 bg-white/70 px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 shadow-sm backdrop-blur dark:border-zinc-800/70 dark:bg-zinc-900/70 dark:text-zinc-400">
+            Today
+          </div>
+        </header>
+
+        <WorkoutSelector
+          value={workoutId}
+          options={workoutOptions}
+          onChange={setWorkoutId}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        <ExerciseAccordion
+          exercises={exercises}
+          onSetChange={handleSetChange}
+          onAddSet={handleAddSet}
+          onRemoveSet={handleRemoveSet}
+        />
       </main>
+
+      <SaveWorkoutButton onClick={() => {}} />
     </div>
   );
 }
