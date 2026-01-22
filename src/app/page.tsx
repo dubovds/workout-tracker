@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ExerciseAccordion, {
   ExerciseEntry,
   SetEntry,
@@ -8,6 +8,7 @@ import ExerciseAccordion, {
 import SaveWorkoutButton from "./components/SaveWorkoutButton";
 import WorkoutSelector from "./components/WorkoutSelector";
 import { EXERCISES } from "./lib/exercises";
+import { saveWorkout } from "./lib/saveWorkout";
 
 export default function Home() {
   const workoutOptions = [
@@ -39,6 +40,30 @@ export default function Home() {
   const [exercises, setExercises] = useState<ExerciseEntry[]>(
     initialExercises
   );
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const showToast = (message: string, variant: "success" | "error") => {
+    setToast({ message, variant });
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 3500);
+  };
 
   const handleSetChange = (
     exerciseId: string,
@@ -99,6 +124,28 @@ export default function Home() {
     );
   };
 
+  const handleSaveWorkout = async () => {
+    setToast(null);
+    setIsSaving(true);
+    try {
+      const workoutId = await saveWorkout({
+        date: new Date().toISOString().slice(0, 10),
+        exercises: exercises.map((exercise) => ({
+          name: exercise.name,
+          sets: exercise.sets.map((set) => ({
+            weight: set.weight,
+            reps: set.reps,
+          })),
+        })),
+      });
+      showToast(`Workout saved (${workoutId.slice(0, 6)})`, "success");
+    } catch (error) {
+      showToast("Failed to save workout. Check Supabase keys.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-emerald-200/40 blur-3xl dark:bg-emerald-400/20" />
@@ -122,6 +169,22 @@ export default function Home() {
             Today
           </div>
         </header>
+        {toast ? (
+          <div
+            role="status"
+            className="fixed left-1/2 top-4 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 sm:top-6"
+          >
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-semibold shadow-lg backdrop-blur ${
+                toast.variant === "success"
+                  ? "border-emerald-200 bg-emerald-50/90 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-100"
+                  : "border-rose-200 bg-rose-50/90 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-100"
+              }`}
+            >
+              {toast.message}
+            </div>
+          </div>
+        ) : null}
 
         <WorkoutSelector
           value={workoutId}
@@ -137,7 +200,7 @@ export default function Home() {
         />
       </main>
 
-      <SaveWorkoutButton onClick={() => {}} />
+      <SaveWorkoutButton onClick={handleSaveWorkout} isSaving={isSaving} />
     </div>
   );
 }
