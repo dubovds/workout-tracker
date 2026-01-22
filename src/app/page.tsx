@@ -17,24 +17,11 @@ export default function Home() {
     { id: "lower-focus", label: "Lower Focus" },
   ];
 
-  const initialExercises: ExerciseEntry[] = EXERCISES.map(
-    (exercise, index) => ({
-      id: exercise.id,
-      name: exercise.name,
-      sets: [
-        {
-          id: `${exercise.id}-set-1`,
-          weight: 8 + index * 2,
-          reps: 12,
-        },
-        {
-          id: `${exercise.id}-set-2`,
-          weight: 10 + index * 2,
-          reps: 10,
-        },
-      ],
-    })
-  );
+  const initialExercises: ExerciseEntry[] = EXERCISES.map((exercise) => ({
+    id: exercise.id,
+    name: exercise.name,
+    sets: [],
+  }));
 
   const [workoutId, setWorkoutId] = useState(workoutOptions[0].id);
   const [exercises, setExercises] = useState<ExerciseEntry[]>(
@@ -45,6 +32,7 @@ export default function Home() {
     variant: "success" | "error";
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [focusSetId, setFocusSetId] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -87,7 +75,13 @@ export default function Home() {
     );
   };
 
-  const handleAddSet = (exerciseId: string) => {
+  const handleAddSet = (
+    exerciseId: string,
+    defaultWeight = 0,
+    defaultReps?: number
+  ) => {
+    const newSetId = `${exerciseId}-set-${Date.now()}`;
+    setFocusSetId(newSetId);
     setExercises((prevExercises) =>
       prevExercises.map((exercise) => {
         if (exercise.id !== exerciseId) {
@@ -96,9 +90,9 @@ export default function Home() {
 
         const lastSet = exercise.sets[exercise.sets.length - 1];
         const newSet: SetEntry = {
-          id: `${exerciseId}-set-${Date.now()}`,
-          weight: lastSet?.weight ?? 10,
-          reps: lastSet?.reps ?? 8,
+          id: newSetId,
+          weight: lastSet?.weight ?? defaultWeight,
+          reps: lastSet?.reps ?? defaultReps ?? 8,
         };
 
         return {
@@ -128,12 +122,33 @@ export default function Home() {
     setToast(null);
     setIsSaving(true);
     try {
+      const validationErrors: string[] = [];
+      exercises.forEach((exercise) => {
+        exercise.sets.forEach((set, index) => {
+          const repsValue = Number(set.reps);
+          if (!repsValue || repsValue <= 0) {
+            validationErrors.push(
+              `${exercise.name} — Set ${index + 1}: reps is required`
+            );
+          }
+        });
+      });
+
+      if (validationErrors.length > 0) {
+        showToast(
+          `Cannot save workout:\n${validationErrors.join("\n")}`,
+          "error"
+        );
+        setIsSaving(false);
+        return;
+      }
+
       const workoutId = await saveWorkout({
         date: new Date().toISOString().slice(0, 10),
         exercises: exercises.map((exercise) => ({
           name: exercise.name,
           sets: exercise.sets.map((set) => ({
-            weight: set.weight,
+            weight: Number(set.weight) || 0,
             reps: set.reps,
           })),
         })),
@@ -175,7 +190,7 @@ export default function Home() {
             className="fixed left-1/2 top-4 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 sm:top-6"
           >
             <div
-              className={`rounded-2xl border px-4 py-3 text-sm font-semibold shadow-lg backdrop-blur ${
+              className={`whitespace-pre-line rounded-2xl border px-4 py-3 text-sm font-semibold shadow-lg backdrop-blur ${
                 toast.variant === "success"
                   ? "border-emerald-200 bg-emerald-50/90 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-100"
                   : "border-rose-200 bg-rose-50/90 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-100"
@@ -194,6 +209,7 @@ export default function Home() {
 
         <ExerciseAccordion
           exercises={exercises}
+          focusSetId={focusSetId}
           onSetChange={handleSetChange}
           onAddSet={handleAddSet}
           onRemoveSet={handleRemoveSet}
