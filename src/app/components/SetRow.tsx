@@ -4,6 +4,7 @@ type SetRowProps = {
   onWeightChange: (value: number) => void;
   onRepsChange: (value: number) => void;
   onRemove: () => void;
+  autoFocus?: boolean;
 };
 
 export default function SetRow({
@@ -12,6 +13,7 @@ export default function SetRow({
   onWeightChange,
   onRepsChange,
   onRemove,
+  autoFocus = false,
 }: SetRowProps) {
   return (
     <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-3">
@@ -22,6 +24,7 @@ export default function SetRow({
           inputMode="numeric"
           min={0}
           value={weight}
+          autoFocus={autoFocus}
           onChange={(event) => onWeightChange(Number(event.target.value))}
           className="h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base font-medium text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/30"
         />

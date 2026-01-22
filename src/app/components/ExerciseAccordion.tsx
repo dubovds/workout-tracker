@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SetRow from "./SetRow";
+import { getLastExerciseWeights } from "../lib/getLastExerciseWeights";
 
 export type SetEntry = {
   id: string;
@@ -17,42 +18,35 @@ export type ExerciseEntry = {
 
 type ExerciseAccordionProps = {
   exercises: ExerciseEntry[];
+  focusSetId?: string | null;
   onSetChange: (
     exerciseId: string,
     setId: string,
     field: "weight" | "reps",
     value: number
   ) => void;
-  onAddSet: (exerciseId: string) => void;
+  onAddSet: (
+    exerciseId: string,
+    defaultWeight?: number,
+    defaultReps?: number
+  ) => void;
   onRemoveSet: (exerciseId: string, setId: string) => void;
 };
 
-const getWeightSummary = (sets: SetEntry[]) => {
-  if (sets.length === 0) {
+const formatWeightSummary = (
+  workingWeight: number | null,
+  maxWeight: number | null
+) => {
+  if (workingWeight === null || maxWeight === null) {
     return "-- / -- kg";
   }
 
-  const frequency = new Map<number, number>();
-  sets.forEach((set) => {
-    frequency.set(set.weight, (frequency.get(set.weight) ?? 0) + 1);
-  });
-
-  let dominant = sets[0].weight;
-  let dominantCount = 0;
-  frequency.forEach((count, weight) => {
-    if (count > dominantCount || (count === dominantCount && weight > dominant)) {
-      dominant = weight;
-      dominantCount = count;
-    }
-  });
-
-  const maxWeight = Math.max(...sets.map((set) => set.weight));
-
-  return `${dominant} / ${maxWeight} kg`;
+  return `${workingWeight} / ${maxWeight} kg`;
 };
 
 export default function ExerciseAccordion({
   exercises,
+  focusSetId,
   onSetChange,
   onAddSet,
   onRemoveSet,
@@ -60,22 +54,125 @@ export default function ExerciseAccordion({
   const [openExerciseId, setOpenExerciseId] = useState<string | null>(
     exercises[0]?.id ?? null
   );
+  const [weightCache, setWeightCache] = useState<
+    Record<
+      string,
+      { workingWeight: number | null; maxWeight: number | null; lastReps: number | null }
+    >
+  >({});
+  const [loadingWeights, setLoadingWeights] = useState<Record<string, boolean>>(
+    {}
+  );
+  const rowRefs = useRef<Record<string, HTMLElement | null>>({});
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const loadWeights = useCallback(
+    async (exerciseId: string, exerciseName: string) => {
+      if (weightCache[exerciseId] || loadingWeights[exerciseId]) {
+        return;
+      }
+
+      setLoadingWeights((prev) => ({ ...prev, [exerciseId]: true }));
+      try {
+        const weights = await getLastExerciseWeights(exerciseName);
+        setWeightCache((prev) => ({ ...prev, [exerciseId]: weights }));
+      } catch (error) {
+        console.error("Failed to load exercise weights:", error);
+        setWeightCache((prev) => ({
+          ...prev,
+          [exerciseId]: { workingWeight: null, maxWeight: null, lastReps: null },
+        }));
+      } finally {
+        setLoadingWeights((prev) => ({ ...prev, [exerciseId]: false }));
+      }
+    },
+    [loadingWeights, weightCache]
+  );
+
+  useEffect(() => {
+    if (!openExerciseId) {
+      return;
+    }
+    const exercise = exercises.find((item) => item.id === openExerciseId);
+    if (!exercise || exercise.sets.length > 0) {
+      return;
+    }
+    const cached = weightCache[exercise.id];
+    if (!cached) {
+      return;
+    }
+    onAddSet(
+      exercise.id,
+      cached.workingWeight ?? 0,
+      cached.lastReps ?? undefined
+    );
+  }, [openExerciseId, exercises, weightCache, onAddSet]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    observerRef.current?.disconnect();
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+          const target = entry.target as HTMLElement;
+          const exerciseId = target.dataset.exerciseId;
+          const exerciseName = target.dataset.exerciseName;
+          if (!exerciseId || !exerciseName) {
+            return;
+          }
+          void loadWeights(exerciseId, exerciseName);
+        });
+      },
+      { rootMargin: "120px 0px", threshold: 0.1 }
+    );
+
+    Object.values(rowRefs.current).forEach((node) => {
+      if (node) {
+        observerRef.current?.observe(node);
+      }
+    });
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [exercises, loadWeights]);
 
   return (
     <section className="divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
       {exercises.map((exercise) => {
         const isOpen = exercise.id === openExerciseId;
 
+        const cachedWeights = weightCache[exercise.id];
+        const summary = formatWeightSummary(
+          cachedWeights?.workingWeight ?? null,
+          cachedWeights?.maxWeight ?? null
+        );
+
         return (
           <article
             key={exercise.id}
+            ref={(node) => {
+              rowRefs.current[exercise.id] = node;
+            }}
+            data-exercise-id={exercise.id}
+            data-exercise-name={exercise.name}
             className="bg-white/80 px-2 py-4 backdrop-blur dark:bg-zinc-900/70"
           >
             <button
               type="button"
-              onClick={() =>
-                setOpenExerciseId(isOpen ? null : exercise.id)
-              }
+              onClick={() => {
+                const nextIsOpen = !isOpen;
+                setOpenExerciseId(nextIsOpen ? exercise.id : null);
+                if (nextIsOpen) {
+                  void loadWeights(exercise.id, exercise.name);
+                }
+              }}
               aria-expanded={isOpen}
               className="grid w-full grid-cols-[1fr_auto] items-start gap-3 text-left sm:grid-cols-[1fr_auto_auto] sm:items-center"
             >
@@ -87,11 +184,11 @@ export default function ExerciseAccordion({
                   {exercise.name}
                 </h3>
                 <span className="mt-2 text-xs font-bold text-zinc-500 dark:text-zinc-300 sm:hidden">
-                  {getWeightSummary(exercise.sets)}
+                  {loadingWeights[exercise.id] ? "Loading..." : summary}
                 </span>
               </div>
               <span className="hidden text-xs font-bold text-zinc-500 dark:text-zinc-300 sm:inline-flex sm:justify-self-end">
-                {getWeightSummary(exercise.sets)}
+                {loadingWeights[exercise.id] ? "Loading..." : summary}
               </span>
               <span
                 className={`flex h-8 w-8 items-center justify-center justify-self-end rounded-full border border-zinc-200 text-zinc-400 transition-transform duration-200 dark:border-zinc-700 dark:text-zinc-300 sm:h-9 sm:w-9 ${
@@ -125,6 +222,7 @@ export default function ExerciseAccordion({
                     <SetRow
                       weight={set.weight}
                       reps={set.reps}
+                      autoFocus={set.id === focusSetId}
                       onWeightChange={(value) =>
                         onSetChange(exercise.id, set.id, "weight", value)
                       }
@@ -137,7 +235,13 @@ export default function ExerciseAccordion({
                 ))}
                 <button
                   type="button"
-                  onClick={() => onAddSet(exercise.id)}
+                  onClick={() =>
+                    onAddSet(
+                      exercise.id,
+                      weightCache[exercise.id]?.workingWeight ?? 0,
+                      weightCache[exercise.id]?.lastReps ?? undefined
+                    )
+                  }
                   className="flex h-12 w-full items-center justify-center rounded-xl border border-dashed border-emerald-300 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500 transition hover:border-emerald-400 hover:text-emerald-600 dark:border-emerald-700/70 dark:text-emerald-400 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
                 >
                   Add set

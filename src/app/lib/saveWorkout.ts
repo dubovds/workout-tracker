@@ -29,7 +29,7 @@ export async function saveWorkout(workout: WorkoutPayload) {
       .from("exercises")
       .insert({
         workout_id: workoutRow.id,
-        name: exercise.name,
+          name: exercise.name.trim().replace(/\s+/g, " "),
       })
       .select("id")
       .single();
