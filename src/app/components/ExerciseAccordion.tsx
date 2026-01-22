@@ -62,14 +62,14 @@ export default function ExerciseAccordion({
   );
 
   return (
-    <section className="space-y-4">
+    <section className="divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
       {exercises.map((exercise) => {
         const isOpen = exercise.id === openExerciseId;
 
         return (
           <article
             key={exercise.id}
-            className="rounded-xl border border-zinc-200/70 bg-white/80 p-2 shadow-sm backdrop-blur dark:border-zinc-800/70 dark:bg-zinc-900/70"
+            className="bg-white/80 px-2 py-4 backdrop-blur dark:bg-zinc-900/70"
           >
             <button
               type="button"
