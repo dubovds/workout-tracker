@@ -6,6 +6,17 @@ type ExerciseWeights = {
   lastReps: number | null;
 };
 
+type ExerciseJoinRow = {
+  weight: number;
+  reps: number;
+  created_at: string;
+  exercises: {
+    id: string;
+    name: string;
+    created_at: string;
+  };
+};
+
 export async function getLastExerciseWeights(
   exerciseName: string
 ): Promise<ExerciseWeights> {
@@ -24,20 +35,22 @@ export async function getLastExerciseWeights(
     return { workingWeight: null, maxWeight: null, lastReps: null };
   }
 
-  const latestExercise = data.reduce((latest, row) => {
+  const rows = data as unknown as ExerciseJoinRow[];
+
+  const latestExercise = rows.reduce((latest, row) => {
     if (!latest) {
       return row.exercises;
     }
     const latestDate = new Date(latest.created_at);
     const rowDate = new Date(row.exercises.created_at);
     return rowDate > latestDate ? row.exercises : latest;
-  }, null as (typeof data)[number]["exercises"] | null);
+  }, null as ExerciseJoinRow["exercises"] | null);
 
   if (!latestExercise) {
     return { workingWeight: null, maxWeight: null, lastReps: null };
   }
 
-  const latestSets = data.filter(
+  const latestSets = rows.filter(
     (row) => row.exercises.id === latestExercise.id
   );
 
