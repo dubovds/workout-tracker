@@ -47,13 +47,15 @@ export async function getLastExerciseWeights(
   const rows = data as unknown as ExerciseSetJoin[];
 
   const latestExercise = rows.reduce<ExerciseRecord | null>((latest, row) => {
-    const exercise = row.exercises;
+    const rowTyped = row as ExerciseSetJoin;
+    const exercise = rowTyped.exercises as ExerciseRecord;
     if (!latest) {
       return exercise;
     }
-    const latestDate = new Date(latest.created_at);
+    const latestTyped = latest as ExerciseRecord;
+    const latestDate = new Date(latestTyped.created_at);
     const rowDate = new Date(exercise.created_at);
-    return rowDate > latestDate ? exercise : latest;
+    return rowDate > latestDate ? exercise : latestTyped;
   }, null);
 
   if (!latestExercise) {
