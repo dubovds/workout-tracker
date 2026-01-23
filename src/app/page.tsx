@@ -53,26 +53,29 @@ export default function Home() {
     }, 3500);
   };
 
+  const updateExercise = (
+    exerciseId: string,
+    updater: (exercise: ExerciseEntry) => ExerciseEntry
+  ) => {
+    setExercises((prevExercises) =>
+      prevExercises.map((exercise) =>
+        exercise.id === exerciseId ? updater(exercise) : exercise
+      )
+    );
+  };
+
   const handleSetChange = (
     exerciseId: string,
     setId: string,
     field: "weight" | "reps",
     value: number
   ) => {
-    setExercises((prevExercises) =>
-      prevExercises.map((exercise) => {
-        if (exercise.id !== exerciseId) {
-          return exercise;
-        }
-
-        return {
-          ...exercise,
-          sets: exercise.sets.map((set) =>
-            set.id === setId ? { ...set, [field]: value } : set
-          ),
-        };
-      })
-    );
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      sets: exercise.sets.map((set) =>
+        set.id === setId ? { ...set, [field]: value } : set
+      ),
+    }));
   };
 
   const handleAddSet = (
@@ -82,40 +85,25 @@ export default function Home() {
   ) => {
     const newSetId = `${exerciseId}-set-${crypto.randomUUID()}`;
     setFocusSetId(newSetId);
-    setExercises((prevExercises) =>
-      prevExercises.map((exercise) => {
-        if (exercise.id !== exerciseId) {
-          return exercise;
-        }
-
-        const lastSet = exercise.sets[exercise.sets.length - 1];
-        const newSet: SetEntry = {
-          id: newSetId,
-          weight: lastSet?.weight ?? defaultWeight,
-          reps: lastSet?.reps ?? defaultReps ?? 8,
-        };
-
-        return {
-          ...exercise,
-          sets: [...exercise.sets, newSet],
-        };
-      })
-    );
+    updateExercise(exerciseId, (exercise) => {
+      const lastSet = exercise.sets[exercise.sets.length - 1];
+      const newSet: SetEntry = {
+        id: newSetId,
+        weight: lastSet?.weight ?? defaultWeight,
+        reps: lastSet?.reps ?? defaultReps ?? 8,
+      };
+      return {
+        ...exercise,
+        sets: [...exercise.sets, newSet],
+      };
+    });
   };
 
   const handleRemoveSet = (exerciseId: string, setId: string) => {
-    setExercises((prevExercises) =>
-      prevExercises.map((exercise) => {
-        if (exercise.id !== exerciseId) {
-          return exercise;
-        }
-
-        return {
-          ...exercise,
-          sets: exercise.sets.filter((set) => set.id !== setId),
-        };
-      })
-    );
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      sets: exercise.sets.filter((set) => set.id !== setId),
+    }));
   };
 
   const handleSaveWorkout = async () => {

@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { normalizeExerciseName } from "./utils";
 
 export type WorkoutPayload = {
   date: string;
@@ -37,7 +38,7 @@ export async function saveWorkout(workout: WorkoutPayload) {
 
   const exercisesToInsert = exercisesWithSets.map((exercise) => ({
     workout_id: workoutId,
-    name: exercise.name.trim().replace(/\s+/g, " "),
+    name: normalizeExerciseName(exercise.name),
   }));
 
   const { data: exerciseRows, error: exercisesError } = await supabase

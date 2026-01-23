@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { normalizeExerciseName } from "./utils";
 
 type ExerciseWeights = {
   workingWeight: number | null;
@@ -19,10 +20,16 @@ type ExerciseSetJoin = {
   exercises: ExerciseRecord;
 };
 
+const EMPTY_WEIGHTS: ExerciseWeights = {
+  workingWeight: null,
+  maxWeight: null,
+  lastReps: null,
+};
+
 export async function getLastExerciseWeights(
   exerciseName: string
 ): Promise<ExerciseWeights> {
-  const normalizedName = exerciseName.trim().replace(/\s+/g, " ");
+  const normalizedName = normalizeExerciseName(exerciseName);
 
   const { data, error } = await supabase
     .from("sets")
@@ -34,14 +41,13 @@ export async function getLastExerciseWeights(
   }
 
   if (!data || data.length === 0) {
-    return { workingWeight: null, maxWeight: null, lastReps: null };
+    return EMPTY_WEIGHTS;
   }
 
   const rows = data as unknown as ExerciseSetJoin[];
 
   const latestExercise = rows.reduce<ExerciseRecord | null>((latest, row) => {
-    const rowTyped = row as ExerciseSetJoin;
-    const exercise = rowTyped.exercises;
+    const exercise = row.exercises;
     if (!latest) {
       return exercise;
     }
@@ -51,16 +57,15 @@ export async function getLastExerciseWeights(
   }, null);
 
   if (!latestExercise) {
-    return { workingWeight: null, maxWeight: null, lastReps: null };
+    return EMPTY_WEIGHTS;
   }
 
   const latestSets = rows.filter((row) => {
-    const rowTyped = row as ExerciseSetJoin;
-    return rowTyped.exercises.id === latestExercise.id;
+    return row.exercises.id === latestExercise.id;
   });
 
   if (latestSets.length === 0) {
-    return { workingWeight: null, maxWeight: null, lastReps: null };
+    return EMPTY_WEIGHTS;
   }
 
   const weights = latestSets.map((row) => Number(row.weight));
@@ -79,14 +84,14 @@ export async function getLastExerciseWeights(
   });
 
   const maxWeight = Math.max(...weights);
-  const lastSet = latestSets.reduce((latest, row) => {
+  const lastSet = latestSets.reduce<ExerciseSetJoin | null>((latest, row) => {
     if (!latest) {
       return row;
     }
     return new Date(row.created_at) > new Date(latest.created_at)
       ? row
       : latest;
-  }, null as (typeof latestSets)[number] | null);
+  }, null);
   const lastReps = lastSet ? Number(lastSet.reps) : null;
 
   return { workingWeight, maxWeight, lastReps };
