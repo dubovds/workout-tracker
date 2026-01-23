@@ -80,7 +80,7 @@ export default function Home() {
     defaultWeight = 0,
     defaultReps?: number
   ) => {
-    const newSetId = `${exerciseId}-set-${Date.now()}`;
+    const newSetId = `${exerciseId}-set-${crypto.randomUUID()}`;
     setFocusSetId(newSetId);
     setExercises((prevExercises) =>
       prevExercises.map((exercise) => {
@@ -126,9 +126,15 @@ export default function Home() {
       exercises.forEach((exercise) => {
         exercise.sets.forEach((set, index) => {
           const repsValue = Number(set.reps);
-          if (!repsValue || repsValue <= 0) {
+          if (!Number.isFinite(repsValue) || repsValue <= 0) {
             validationErrors.push(
-              `${exercise.name} — Set ${index + 1}: reps is required`
+              `${exercise.name} — Set ${index + 1}: reps must be a positive number`
+            );
+          }
+          const weightValue = Number(set.weight);
+          if (!Number.isFinite(weightValue) || weightValue < 0) {
+            validationErrors.push(
+              `${exercise.name} — Set ${index + 1}: weight must be a non-negative number`
             );
           }
         });

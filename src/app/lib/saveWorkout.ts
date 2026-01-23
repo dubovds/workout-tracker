@@ -14,7 +14,7 @@ export type WorkoutPayload = {
 export async function saveWorkout(workout: WorkoutPayload) {
   const { data: workoutRow, error: workoutError } = await supabase
     .from("workouts")
-    .insert({ date: workout.date })
+    .insert({ date: workout.date } as any)
     .select("id")
     .single();
 
@@ -24,42 +24,55 @@ export async function saveWorkout(workout: WorkoutPayload) {
     );
   }
 
-  for (const exercise of workout.exercises) {
-    const { data: exerciseRow, error: exerciseError } = await supabase
-      .from("exercises")
-      .insert({
-        workout_id: workoutRow.id,
-          name: exercise.name.trim().replace(/\s+/g, " "),
-      })
-      .select("id")
-      .single();
+  const workoutRowTyped = workoutRow as { id: string };
+  const workoutId = workoutRowTyped.id;
 
-    if (exerciseError || !exerciseRow) {
-      throw new Error(
-        exerciseError?.message ??
-          `Failed to create exercise: ${exercise.name}.`
-      );
-    }
+  const exercisesWithSets = workout.exercises.filter(
+    (exercise) => exercise.sets.length > 0
+  );
 
-    if (exercise.sets.length === 0) {
-      continue;
-    }
+  if (exercisesWithSets.length === 0) {
+    return workoutId;
+  }
 
-    const { error: setsError } = await supabase.from("sets").insert(
-      exercise.sets.map((set) => ({
-        exercise_id: exerciseRow.id,
-        weight: set.weight,
-        reps: set.reps,
-      }))
+  const exercisesToInsert = exercisesWithSets.map((exercise) => ({
+    workout_id: workoutId,
+    name: exercise.name.trim().replace(/\s+/g, " "),
+  }));
+
+  const { data: exerciseRows, error: exercisesError } = await supabase
+    .from("exercises")
+    .insert(exercisesToInsert as any)
+    .select("id");
+
+  if (exercisesError || !exerciseRows) {
+    throw new Error(
+      exercisesError?.message ?? "Failed to create exercises."
     );
+  }
+
+  const exerciseRowsTyped = exerciseRows as Array<{ id: string }>;
+
+  const setsToInsert = exercisesWithSets.flatMap((exercise, index) => {
+    const exerciseId = exerciseRowsTyped[index].id;
+    return exercise.sets.map((set) => ({
+      exercise_id: exerciseId,
+      weight: set.weight,
+      reps: set.reps,
+    }));
+  });
+
+  if (setsToInsert.length > 0) {
+    const { error: setsError } = await supabase
+      .from("sets")
+      .insert(setsToInsert as any);
 
     if (setsError) {
       throw new Error(
-        setsError.message ??
-          `Failed to create sets for exercise: ${exercise.name}.`
+        setsError.message ?? "Failed to create sets."
       );
     }
   }
 
-  return workoutRow.id;
+  return workoutId;
 }
