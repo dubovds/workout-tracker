@@ -10,11 +10,17 @@ type ExerciseJoinRow = {
   weight: number;
   reps: number;
   created_at: string;
-  exercises: {
-    id: string;
-    name: string;
-    created_at: string;
-  };
+  exercises:
+    | {
+        id: string;
+        name: string;
+        created_at: string;
+      }
+    | {
+        id: string;
+        name: string;
+        created_at: string;
+      }[];
 };
 
 export async function getLastExerciseWeights(
@@ -37,22 +43,30 @@ export async function getLastExerciseWeights(
 
   const rows = data as unknown as ExerciseJoinRow[];
 
+  const getExercise = (row: ExerciseJoinRow) =>
+    Array.isArray(row.exercises) ? row.exercises[0] : row.exercises;
+
   const latestExercise = rows.reduce((latest, row) => {
+    const exercise = getExercise(row);
+    if (!exercise) {
+      return latest;
+    }
     if (!latest) {
-      return row.exercises;
+      return exercise;
     }
     const latestDate = new Date(latest.created_at);
-    const rowDate = new Date(row.exercises.created_at);
-    return rowDate > latestDate ? row.exercises : latest;
+    const rowDate = new Date(exercise.created_at);
+    return rowDate > latestDate ? exercise : latest;
   }, null as ExerciseJoinRow["exercises"] | null);
 
   if (!latestExercise) {
     return { workingWeight: null, maxWeight: null, lastReps: null };
   }
 
-  const latestSets = rows.filter(
-    (row) => row.exercises.id === latestExercise.id
-  );
+  const latestSets = rows.filter((row) => {
+    const exercise = getExercise(row);
+    return exercise?.id === latestExercise.id;
+  });
 
   if (latestSets.length === 0) {
     return { workingWeight: null, maxWeight: null, lastReps: null };
