@@ -65,14 +65,17 @@ export default function ExerciseAccordion({
   );
   const rowRefs = useRef<Record<string, HTMLElement | null>>({});
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const activeRequestsRef = useRef<Set<string>>(new Set());
 
   const loadWeights = useCallback(
     async (exerciseId: string, exerciseName: string) => {
-      if (weightCache[exerciseId] || loadingWeights[exerciseId]) {
+      if (weightCache[exerciseId] || activeRequestsRef.current.has(exerciseId)) {
         return;
       }
 
+      activeRequestsRef.current.add(exerciseId);
       setLoadingWeights((prev) => ({ ...prev, [exerciseId]: true }));
+      
       try {
         const weights = await getLastExerciseWeights(exerciseName);
         setWeightCache((prev) => ({ ...prev, [exerciseId]: weights }));
@@ -83,10 +86,11 @@ export default function ExerciseAccordion({
           [exerciseId]: { workingWeight: null, maxWeight: null, lastReps: null },
         }));
       } finally {
+        activeRequestsRef.current.delete(exerciseId);
         setLoadingWeights((prev) => ({ ...prev, [exerciseId]: false }));
       }
     },
-    [loadingWeights, weightCache]
+    [weightCache]
   );
 
   useEffect(() => {
