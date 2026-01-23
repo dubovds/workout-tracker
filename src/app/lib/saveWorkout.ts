@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { getSupabaseClient } from "./supabase";
 import { normalizeExerciseName } from "./utils";
 
 export type WorkoutPayload = {
@@ -13,6 +13,7 @@ export type WorkoutPayload = {
 };
 
 export async function saveWorkout(workout: WorkoutPayload) {
+  const supabase = getSupabaseClient();
   const { data: workoutRow, error: workoutError } = await supabase
     .from("workouts")
     .insert({ date: workout.date } as any)

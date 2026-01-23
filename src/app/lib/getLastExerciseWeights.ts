@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { getSupabaseClient } from "./supabase";
 import { normalizeExerciseName } from "./utils";
 
 type ExerciseWeights = {
@@ -30,6 +30,7 @@ export async function getLastExerciseWeights(
   exerciseName: string
 ): Promise<ExerciseWeights> {
   const normalizedName = normalizeExerciseName(exerciseName);
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
     .from("sets")
