@@ -34,13 +34,20 @@
 - Откройте ваш проект в Supabase Dashboard
 - Перейдите в **Settings** → **API**
 - Скопируйте:
-  - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
+  - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL` (можно с или без `https://` - код автоматически добавит)
   - **anon public** ключ → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+**Важно о формате URL:**
+- URL может быть с протоколом: `https://wvlldvaibndedmerjssj.supabase.co`
+- Или без протокола: `wvlldvaibndedmerjssj.supabase.co` (код автоматически добавит `https://`)
+- Оба варианта работают благодаря автоматической нормализации
 
 **Быстрая проверка:**
 - Откройте консоль браузера на проде (F12)
-- Проверьте ошибки - если видите "Missing Supabase environment variables" → переменные не установлены
-- Если видите "Invalid NEXT_PUBLIC_SUPABASE_URL format" → URL неправильный
+- Проверьте ошибки:
+  - "Missing Supabase environment variables" → переменные не установлены
+  - "Invalid NEXT_PUBLIC_SUPABASE_URL format" → URL неправильный (но обычно код сам исправит)
+  - "Supabase URL missing protocol, automatically added https://" → это нормально, код исправил URL
 
 ### 2. ✅ Миграции базы данных
 

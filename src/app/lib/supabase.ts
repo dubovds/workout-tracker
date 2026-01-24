@@ -36,21 +36,32 @@ export function getSupabaseClient() {
     throw new Error(errorMessage);
   }
 
+  // Normalize URL: add https:// if protocol is missing
+  let normalizedUrl = supabaseUrl.trim();
+  if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+    normalizedUrl = `https://${normalizedUrl}`;
+    console.warn("Supabase URL missing protocol, automatically added https://");
+  }
+
   // Validate URL format
+  let validUrl: URL;
   try {
-    new URL(supabaseUrl);
+    validUrl = new URL(normalizedUrl);
   } catch (urlError) {
-    const errorMessage = `Invalid NEXT_PUBLIC_SUPABASE_URL format: ${supabaseUrl.substring(0, 50)}...`;
+    const errorMessage = `Invalid NEXT_PUBLIC_SUPABASE_URL format: ${supabaseUrl.substring(0, 50)}... (URL must include protocol: https://your-project.supabase.co)`;
     console.error("Supabase URL validation error:", errorMessage, urlError);
     throw new Error(errorMessage);
   }
+
+  // Use normalized URL instead of original
+  const finalUrl = validUrl.toString().replace(/\/$/, ""); // Remove trailing slash
 
   // Validate key format (should start with eyJ for JWT)
   if (!supabaseAnonKey.startsWith("eyJ")) {
     console.warn("Supabase anon key format looks unusual. Expected JWT token starting with 'eyJ'");
   }
 
-  cachedClient = createClient(supabaseUrl, supabaseAnonKey, {
+  cachedClient = createClient(finalUrl, supabaseAnonKey, {
     auth: {
       persistSession: false, // Don't persist session in server components
       autoRefreshToken: false,
