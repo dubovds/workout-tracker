@@ -1,0 +1,16 @@
+/**
+ * Application constants
+ * Centralized configuration values to avoid magic numbers
+ */
+
+export const WORKOUT_CONSTANTS = {
+  TOAST_DURATION_MS: 3500,
+  MAX_EXERCISES: 100,
+  MAX_SETS_PER_EXERCISE: 50,
+  MAX_REPS: 1000,
+  MAX_WEIGHT_KG: 10000,
+  EXERCISE_NAME_MAX_LENGTH: 100,
+  SAVE_COOLDOWN_MS: 2000,
+  INTERSECTION_OBSERVER_ROOT_MARGIN: "120px 0px",
+  INTERSECTION_OBSERVER_THRESHOLD: 0.1,
+} as const;
