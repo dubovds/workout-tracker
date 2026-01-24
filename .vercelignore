@@ -1,0 +1,5 @@
+# Ignore files for Vercel deployment
+docs/
+*.md
+!README.md
+DEPLOYMENT.md

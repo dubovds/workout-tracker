@@ -1,11 +1,11 @@
-type SetRowProps = {
+type SetRowProps = Readonly<{
   weight: number;
   reps: number;
   onWeightChange: (value: number) => void;
   onRepsChange: (value: number) => void;
   onRemove: () => void;
   autoFocus?: boolean;
-};
+}>;
 
 export default function SetRow({
   weight,
@@ -23,9 +23,16 @@ export default function SetRow({
           type="number"
           inputMode="numeric"
           min={0}
+          step={0.5}
           value={weight}
           autoFocus={autoFocus}
-          onChange={(event) => onWeightChange(Number(event.target.value))}
+          aria-label="Weight in kilograms"
+          onChange={(event) => {
+            const val = Number(event.target.value);
+            if (!isNaN(val) && val >= 0 && isFinite(val)) {
+              onWeightChange(val);
+            }
+          }}
           className="h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base font-medium text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/30"
         />
       </label>
@@ -34,9 +41,15 @@ export default function SetRow({
         <input
           type="number"
           inputMode="numeric"
-          min={0}
+          min={1}
           value={reps}
-          onChange={(event) => onRepsChange(Number(event.target.value))}
+          aria-label="Number of repetitions"
+          onChange={(event) => {
+            const val = Number(event.target.value);
+            if (!isNaN(val) && val >= 1 && isFinite(val)) {
+              onRepsChange(val);
+            }
+          }}
           className="h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base font-medium text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/30"
         />
       </label>
@@ -44,9 +57,12 @@ export default function SetRow({
         type="button"
         onClick={onRemove}
         aria-label="Remove set"
-        className="mt-5 flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-200 text-zinc-400 transition hover:border-rose-400 hover:text-rose-500 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-rose-400 dark:hover:text-rose-400"
+        title="Remove set"
+        className="mt-5 flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-200 text-zinc-400 transition hover:border-rose-400 hover:text-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-rose-400 dark:hover:text-rose-400"
       >
-        <span className="text-xl leading-none">x</span>
+        <span className="text-xl leading-none" aria-hidden="true">
+          ×
+        </span>
       </button>
     </div>
   );

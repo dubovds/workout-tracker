@@ -1,159 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import ExerciseAccordion, {
-  ExerciseEntry,
-  SetEntry,
-} from "./components/ExerciseAccordion";
+import ExerciseAccordion from "./components/ExerciseAccordion";
 import SaveWorkoutButton from "./components/SaveWorkoutButton";
 import WorkoutSelector from "./components/WorkoutSelector";
-import { EXERCISES } from "./lib/exercises";
-import { saveWorkout } from "./lib/saveWorkout";
+import { useWorkoutState } from "./hooks/useWorkoutState";
 
 export default function Home() {
-  const workoutOptions = [
-    { id: "full-body-a", label: "Full Body A" },
-    { id: "upper-push", label: "Upper Push" },
-    { id: "lower-focus", label: "Lower Focus" },
-  ];
-
-  const initialExercises: ExerciseEntry[] = EXERCISES.map((exercise) => ({
-    id: exercise.id,
-    name: exercise.name,
-    sets: [],
-  }));
-
-  const [workoutId, setWorkoutId] = useState(workoutOptions[0].id);
-  const [exercises, setExercises] = useState<ExerciseEntry[]>(
-    initialExercises
-  );
-  const [toast, setToast] = useState<{
-    message: string;
-    variant: "success" | "error";
-  } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [focusSetId, setFocusSetId] = useState<string | null>(null);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const showToast = (message: string, variant: "success" | "error") => {
-    setToast({ message, variant });
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast(null);
-    }, 3500);
-  };
-
-  const updateExercise = (
-    exerciseId: string,
-    updater: (exercise: ExerciseEntry) => ExerciseEntry
-  ) => {
-    setExercises((prevExercises) =>
-      prevExercises.map((exercise) =>
-        exercise.id === exerciseId ? updater(exercise) : exercise
-      )
-    );
-  };
-
-  const handleSetChange = (
-    exerciseId: string,
-    setId: string,
-    field: "weight" | "reps",
-    value: number
-  ) => {
-    updateExercise(exerciseId, (exercise) => ({
-      ...exercise,
-      sets: exercise.sets.map((set) =>
-        set.id === setId ? { ...set, [field]: value } : set
-      ),
-    }));
-  };
-
-  const handleAddSet = (
-    exerciseId: string,
-    defaultWeight = 0,
-    defaultReps?: number
-  ) => {
-    const newSetId = `${exerciseId}-set-${crypto.randomUUID()}`;
-    setFocusSetId(newSetId);
-    updateExercise(exerciseId, (exercise) => {
-      const lastSet = exercise.sets[exercise.sets.length - 1];
-      const newSet: SetEntry = {
-        id: newSetId,
-        weight: lastSet?.weight ?? defaultWeight,
-        reps: lastSet?.reps ?? defaultReps ?? 8,
-      };
-      return {
-        ...exercise,
-        sets: [...exercise.sets, newSet],
-      };
-    });
-  };
-
-  const handleRemoveSet = (exerciseId: string, setId: string) => {
-    updateExercise(exerciseId, (exercise) => ({
-      ...exercise,
-      sets: exercise.sets.filter((set) => set.id !== setId),
-    }));
-  };
-
-  const handleSaveWorkout = async () => {
-    setToast(null);
-    setIsSaving(true);
-    try {
-      const validationErrors: string[] = [];
-      exercises.forEach((exercise) => {
-        exercise.sets.forEach((set, index) => {
-          const repsValue = Number(set.reps);
-          if (!Number.isFinite(repsValue) || repsValue <= 0) {
-            validationErrors.push(
-              `${exercise.name} — Set ${index + 1}: reps must be a positive number`
-            );
-          }
-          const weightValue = Number(set.weight);
-          if (!Number.isFinite(weightValue) || weightValue < 0) {
-            validationErrors.push(
-              `${exercise.name} — Set ${index + 1}: weight must be a non-negative number`
-            );
-          }
-        });
-      });
-
-      if (validationErrors.length > 0) {
-        showToast(
-          `Cannot save workout:\n${validationErrors.join("\n")}`,
-          "error"
-        );
-        setIsSaving(false);
-        return;
-      }
-
-      const workoutId = await saveWorkout({
-        date: new Date().toISOString().slice(0, 10),
-        exercises: exercises.map((exercise) => ({
-          name: exercise.name,
-          sets: exercise.sets.map((set) => ({
-            weight: Number(set.weight) || 0,
-            reps: set.reps,
-          })),
-        })),
-      });
-      showToast(`Workout saved (${workoutId.slice(0, 6)})`, "success");
-    } catch (error) {
-      showToast("Failed to save workout. Check Supabase keys.", "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const {
+    workoutOptions,
+    selectedTemplateId,
+    exercises,
+    isSaving,
+    isLoading,
+    focusSetId,
+    toast,
+    handleSetChange,
+    handleAddSet,
+    handleRemoveSet,
+    handleTemplateChange,
+    handleSaveWorkout,
+  } = useWorkoutState();
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -161,7 +27,16 @@ export default function Home() {
       <div className="pointer-events-none absolute -bottom-40 left-0 h-72 w-72 rounded-full bg-orange-200/50 blur-3xl dark:bg-orange-400/20" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),_rgba(255,255,255,0))] dark:bg-[radial-gradient(circle_at_top,_rgba(39,39,42,0.6),_rgba(9,9,11,0))]" />
 
-      <main className="relative z-10 mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 pb-28 pt-8 font-sans sm:px-6">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-emerald-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:outline-none focus:ring-2 focus:ring-emerald-300"
+      >
+        Skip to main content
+      </a>
+      <main
+        id="main-content"
+        className="relative z-10 mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 pb-28 pt-8 font-sans sm:px-6"
+      >
         <header className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600/80 dark:text-emerald-400/80">
@@ -181,6 +56,8 @@ export default function Home() {
         {toast ? (
           <div
             role="status"
+            aria-live={toast.variant === "error" ? "assertive" : "polite"}
+            aria-atomic="true"
             className="fixed left-1/2 top-4 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 sm:top-6"
           >
             <div
@@ -195,11 +72,40 @@ export default function Home() {
           </div>
         ) : null}
 
-        <WorkoutSelector
-          value={workoutId}
-          options={workoutOptions}
-          onChange={setWorkoutId}
-        />
+        {isLoading ? (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-label="Loading workout templates"
+            className="rounded-2xl border border-zinc-200/70 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-zinc-800/70 dark:bg-zinc-900/70"
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-emerald-500 dark:border-zinc-600 dark:border-t-emerald-400"
+                aria-hidden="true"
+              />
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                Loading workout templates...
+              </p>
+            </div>
+          </div>
+        ) : workoutOptions.length === 0 ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-2xl border border-zinc-200/70 bg-white/80 p-8 text-center shadow-sm backdrop-blur dark:border-zinc-800/70 dark:bg-zinc-900/70"
+          >
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              No workout templates available.
+            </p>
+          </div>
+        ) : (
+          <WorkoutSelector
+            value={selectedTemplateId || ""}
+            options={workoutOptions}
+            onChange={handleTemplateChange}
+          />
+        )}
 
         <ExerciseAccordion
           exercises={exercises}

@@ -1,8 +1,8 @@
-type SaveWorkoutButtonProps = {
+type SaveWorkoutButtonProps = Readonly<{
   label?: string;
   isSaving?: boolean;
   onClick?: () => void;
-};
+}>;
 
 export default function SaveWorkoutButton({
   label = "Save workout",
