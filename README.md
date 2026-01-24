@@ -135,9 +135,14 @@ src/app/
 
 1. Подключите репозиторий к Vercel
 2. Добавьте переменные окружения:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-3. Деплой произойдет автоматически
+   - `NEXT_PUBLIC_SUPABASE_URL` - URL вашего Supabase проекта
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Anon/Public ключ из Supabase
+3. **Важно:** Примените миграции базы данных в Supabase Dashboard (SQL Editor):
+   - Выполните `supabase/migrations/0001_init.sql`
+   - Выполните `supabase/migrations/0003_seed_full_body_template.sql`
+4. Деплой произойдет автоматически
+
+**Если возникли проблемы после деплоя:** См. [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
 ### Другие платформы
 

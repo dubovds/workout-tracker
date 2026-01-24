@@ -43,12 +43,31 @@ export function useWorkoutState() {
         setWorkoutOptions([...options]);
         if (options.length > 0) {
           setSelectedTemplateId(options[0].id);
+        } else {
+          // Show warning if no templates found (might indicate migration issue)
+          showToastRef.current(
+            "No workout templates found. Please ensure database migrations are applied.",
+            "error"
+          );
         }
       } catch (error) {
-        showToastRef.current(
-          getErrorMessage(error, "Failed to load workout templates."),
-          "error"
-        );
+        // Log error for debugging (always log in production for troubleshooting)
+        console.error("Failed to load workout templates:", error);
+        
+        // Check if it's an environment variable issue
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes("Missing Supabase environment variables") || 
+            errorMessage.includes("environment variables")) {
+          showToastRef.current(
+            "Configuration error: Supabase environment variables are missing. Please check Vercel settings.",
+            "error"
+          );
+        } else {
+          showToastRef.current(
+            getErrorMessage(error, "Failed to load workout templates."),
+            "error"
+          );
+        }
       } finally {
         setIsLoading(false);
       }
