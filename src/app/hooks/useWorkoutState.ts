@@ -43,8 +43,18 @@ export function useWorkoutState() {
         setWorkoutOptions([...options]);
         if (options.length > 0) {
           setSelectedTemplateId(options[0].id);
+        } else {
+          // Show warning if no templates found (might indicate migration issue)
+          showToastRef.current(
+            "No workout templates found. Please ensure database migrations are applied.",
+            "error"
+          );
         }
       } catch (error) {
+        // Log error for debugging (only in development)
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to load workout templates:", error);
+        }
         showToastRef.current(
           getErrorMessage(error, "Failed to load workout templates."),
           "error"
