@@ -19,23 +19,40 @@ export type WorkoutTemplateExercise = {
 };
 
 export async function getWorkoutTemplates(): Promise<WorkoutTemplate[]> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("workout_templates")
-    .select("id, name, created_at")
-    .order("created_at", { ascending: true });
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from("workout_templates")
+      .select("id, name, created_at")
+      .order("created_at", { ascending: true });
 
-  if (error) {
-    handleSupabaseError(error, "Failed to load workout templates.");
-    // handleSupabaseError throws, but TypeScript doesn't know that
-    throw new Error("Failed to load workout templates."); // Unreachable
+    if (error) {
+      // Log error details for debugging
+      if (process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_DEBUG === "true") {
+        console.error("Supabase query error:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
+      }
+      handleSupabaseError(error, "Failed to load workout templates.");
+      // handleSupabaseError throws, but TypeScript doesn't know that
+      throw new Error("Failed to load workout templates."); // Unreachable
+    }
+
+    // Type-safe conversion with validation
+    return (data ?? []).map((row) => ({
+      ...row,
+      id: assertUUID(row.id),
+    })) as WorkoutTemplate[];
+  } catch (err) {
+    // Re-throw with additional context if it's not already a handled error
+    if (err instanceof Error && !err.message.includes("Failed to load")) {
+      throw new Error(`Failed to load workout templates: ${err.message}`);
+    }
+    throw err;
   }
-
-  // Type-safe conversion with validation
-  return (data ?? []).map((row) => ({
-    ...row,
-    id: assertUUID(row.id),
-  })) as WorkoutTemplate[];
 }
 
 export async function getWorkoutTemplateExercises(
