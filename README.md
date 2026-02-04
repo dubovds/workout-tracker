@@ -1,118 +1,118 @@
 # Workout Tracker
 
-Профессиональное приложение для отслеживания тренировок, построенное на Next.js 16, React 19, TypeScript и Supabase.
+A professional workout tracking application built with Next.js 16, React 19, TypeScript, and Supabase.
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### Требования
+### Requirements
 
 - Node.js 20+
-- npm, yarn, pnpm или bun
-- Supabase проект (или локальный Supabase)
+- npm, yarn, pnpm or bun
+- Supabase project (or local Supabase)
 
-### Установка
+### Installation
 
 ```bash
-# Клонировать репозиторий
+# Clone the repository
 git clone <repository-url>
 cd workout-tracker
 
-# Установить зависимости
+# Install dependencies
 npm install
 
-# Настроить переменные окружения
+# Configure environment variables
 cp .env.example .env.local
-# Заполнить SUPABASE_URL и SUPABASE_ANON_KEY
+# Fill in SUPABASE_URL and SUPABASE_ANON_KEY
 ```
 
-### Переменные окружения
+### Environment Variables
 
-Создайте файл `.env.local`:
+Create a `.env.local` file:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Запуск миграций базы данных
+### Database Migrations
 
 ```bash
-# Применить миграции через Supabase CLI
+# Apply migrations via Supabase CLI
 supabase db push
 
-# Или вручную через Supabase Dashboard:
-# 1. Откройте SQL Editor
-# 2. Выполните файлы из supabase/migrations/ в порядке:
+# Or manually via Supabase Dashboard:
+# 1. Open SQL Editor
+# 2. Run files from supabase/migrations/ in order:
 #    - 0001_init.sql
 #    - 0003_seed_full_body_template.sql
 ```
 
-### Разработка
+### Development
 
 ```bash
 npm run dev
 ```
 
-Откройте [http://localhost:3000](http://localhost:3000) в браузере.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Сборка для продакшена
+### Production Build
 
 ```bash
 npm run build
 npm start
 ```
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
 ```
 src/app/
-├── components/          # React компоненты
+├── components/          # React components
 │   ├── ExerciseAccordion.tsx
 │   ├── Select.tsx
 │   ├── SetRow.tsx
 │   ├── SaveWorkoutButton.tsx
 │   └── WorkoutSelector.tsx
-├── hooks/              # Кастомные React хуки
+├── hooks/              # Custom React hooks
 │   ├── useToast.ts
 │   └── useWorkoutState.ts
 ├── lib/
-│   ├── constants.ts           # Константы приложения
-│   ├── repositories/          # Слой доступа к данным
+│   ├── constants.ts           # App constants
+│   ├── repositories/          # Data access layer
 │   │   ├── workoutRepository.ts
 │   │   └── workoutTemplateRepository.ts
-│   ├── services/              # Бизнес-логика
+│   ├── services/              # Business logic
 │   │   └── workoutService.ts
-│   ├── types/                 # TypeScript типы
+│   ├── types/                 # TypeScript types
 │   │   ├── common.ts
 │   │   └── workout.ts
-│   ├── utils/                 # Утилиты
+│   ├── utils/                 # Utilities
 │   │   ├── errorHandler.ts
 │   │   ├── formatValidationErrors.ts
 │   │   ├── supabaseErrorHandler.ts
 │   │   └── validation.ts
 │   ├── getLastExerciseWeights.ts
 │   └── supabase.ts
-└── page.tsx                   # Главная страница
+└── page.tsx                   # Home page
 ```
 
-## 🏗️ Архитектура
+## 🏗️ Architecture
 
-Проект следует **Service Layer Pattern**:
+The project follows the **Service Layer Pattern**:
 
-- **Components** - UI компоненты, только рендеринг
-- **Hooks** - Управление состоянием и side effects
-- **Services** - Бизнес-логика и валидация
-- **Repositories** - Доступ к данным (Supabase)
+- **Components** — UI components, rendering only
+- **Hooks** — State management and side effects
+- **Services** — Business logic and validation
+- **Repositories** — Data access (Supabase)
 
-## 🔒 Безопасность
+## 🔒 Security
 
-- ✅ Валидация всех входных данных
-- ✅ Санитизация строк для предотвращения XSS
-- ✅ HTTP Security Headers настроены
-- ✅ Rate limiting на критичные операции
-- ✅ Безопасная обработка ошибок (без утечки информации)
+- ✅ Input validation
+- ✅ String sanitization to prevent XSS
+- ✅ HTTP Security Headers configured
+- ✅ Rate limiting on critical operations
+- ✅ Safe error handling (no information leakage)
 
-## 🛠️ Технологии
+## 🛠️ Tech Stack
 
 - **Framework:** Next.js 16 (App Router)
 - **UI:** React 19, Tailwind CSS 4
@@ -121,56 +121,62 @@ src/app/
 - **Validation:** Custom validation utilities
 - **Code Quality:** ESLint, Prettier
 
-## 📝 Скрипты
+## 📝 Scripts
 
-- `npm run dev` - Запуск dev сервера
-- `npm run build` - Сборка для продакшена
-- `npm run start` - Запуск production сервера
-- `npm run lint` - Проверка кода линтером
-- `npm run format` - Форматирование кода
+- `npm run dev` — Start dev server
+- `npm run build` — Production build
+- `npm run start` — Start production server
+- `npm run lint` — Run linter
+- `npm run format` — Format code
 
-## 🚀 Деплой
+## 🚀 Deployment
 
-### Vercel (рекомендуется)
+### Vercel (recommended)
 
-1. Подключите репозиторий к Vercel
-2. Добавьте переменные окружения:
-   - `NEXT_PUBLIC_SUPABASE_URL` - URL вашего Supabase проекта
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Anon/Public ключ из Supabase
-3. **Важно:** Примените миграции базы данных в Supabase Dashboard (SQL Editor):
-   - Выполните `supabase/migrations/0001_init.sql`
-   - Выполните `supabase/migrations/0003_seed_full_body_template.sql`
-4. Деплой произойдет автоматически
+1. Connect the repository to Vercel
+2. Add environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL` — Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Anon/Public key from Supabase
+3. **Important:** Apply database migrations in Supabase Dashboard (SQL Editor):
+   - Run `supabase/migrations/0001_init.sql`
+   - Run `supabase/migrations/0003_seed_full_body_template.sql`
+4. Deployment will run automatically
 
-**Если возникли проблемы после деплоя:** См. [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+**If you run into issues after deployment:** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
-### Другие платформы
+### Other platforms
 
-Приложение готово к деплою на любую платформу, поддерживающую Next.js:
+The app is ready to deploy on any platform that supports Next.js:
 - Netlify
 - Railway
 - AWS Amplify
 - Self-hosted (Docker)
 
-## 📊 База данных
+## 📊 Database
 
-Схема базы данных включает:
+The database schema includes:
 
-- `workouts` - Тренировки
-- `exercises` - Упражнения
-- `sets` - Подходы
-- `workout_templates` - Шаблоны тренировок
-- `workout_template_exercises` - Упражнения в шаблонах
+- `workouts` — Workout sessions
+- `exercises` — Exercises
+- `sets` — Sets
+- `workout_templates` — Workout templates
+- `workout_template_exercises` — Exercises in templates
 
-Все таблицы защищены Row Level Security (RLS).
+All tables are protected with Row Level Security (RLS).
 
-## 🧪 Тестирование
+## 🧪 Testing
 
 ```bash
-# TODO: Добавить тесты
+# TODO: Add tests
 npm run test
 ```
 
-## 📄 Лицензия
+## 📋 Future Tasks
+
+See [TODO.md](./TODO.md) for planned improvements:
+- Loading spinner
+- PWA (Progressive Web App) implementation
+
+## 📄 License
 
 Private project

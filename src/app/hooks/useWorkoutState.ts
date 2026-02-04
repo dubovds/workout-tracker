@@ -154,6 +154,7 @@ export function useWorkoutState() {
             id: newSetId,
             weight: lastSet?.weight ?? defaultWeight,
             reps: lastSet?.reps ?? defaultReps ?? 8,
+            done: false,
           };
           return {
             ...exercise,
@@ -191,6 +192,25 @@ export function useWorkoutState() {
       });
     },
     [showToast]
+  );
+
+  const handleSetDone = useCallback(
+    (exerciseId: string, setId: string, done: boolean) => {
+      setExercises((prevExercises) =>
+        prevExercises.map((exercise) => {
+          if (exercise.id !== exerciseId) {
+            return exercise;
+          }
+          return {
+            ...exercise,
+            sets: exercise.sets.map((set) =>
+              set.id === setId ? { ...set, done } : set
+            ) as ReadonlyArray<ExerciseEntry["sets"][number]>,
+          };
+        })
+      );
+    },
+    []
   );
 
   const handleTemplateChange = useCallback((value: string) => {
@@ -242,6 +262,7 @@ export function useWorkoutState() {
     handleSetChange,
     handleAddSet,
     handleRemoveSet,
+    handleSetDone,
     handleTemplateChange,
     handleSaveWorkout,
   };

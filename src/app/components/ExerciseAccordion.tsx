@@ -26,6 +26,7 @@ type ExerciseAccordionProps = {
     defaultReps?: number
   ) => void;
   onRemoveSet: (exerciseId: string, setId: string) => void;
+  onSetDone: (exerciseId: string, setId: string, done: boolean) => void;
 };
 
 const formatWeightSummary = (
@@ -45,6 +46,7 @@ export default function ExerciseAccordion({
   onSetChange,
   onAddSet,
   onRemoveSet,
+  onSetDone,
 }: ExerciseAccordionProps) {
   const [openExerciseId, setOpenExerciseId] = useState<string | null>(null);
 
@@ -277,12 +279,16 @@ export default function ExerciseAccordion({
                       <SetRow
                         weight={set.weight}
                         reps={set.reps}
+                        done={set.done ?? false}
                         autoFocus={setId === focusSetId}
                         onWeightChange={(value) =>
                           onSetChange(exercise.id, setId, "weight", value)
                         }
                         onRepsChange={(value) =>
                           onSetChange(exercise.id, setId, "reps", value)
+                        }
+                        onDoneChange={(done) =>
+                          onSetDone(exercise.id, setId, done)
                         }
                         onRemove={() => onRemoveSet(exercise.id, setId)}
                       />

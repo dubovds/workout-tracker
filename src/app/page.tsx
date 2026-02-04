@@ -17,6 +17,7 @@ export default function Home() {
     handleSetChange,
     handleAddSet,
     handleRemoveSet,
+    handleSetDone,
     handleTemplateChange,
     handleSaveWorkout,
   } = useWorkoutState();
@@ -113,6 +114,7 @@ export default function Home() {
           onSetChange={handleSetChange}
           onAddSet={handleAddSet}
           onRemoveSet={handleRemoveSet}
+          onSetDone={handleSetDone}
         />
       </main>
 

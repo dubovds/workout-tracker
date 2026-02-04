@@ -2,212 +2,212 @@
 
 ## "Failed to load workout templates" Error
 
-Если вы видите эту ошибку после деплоя, проверьте следующие пункты:
+If you see this error after deployment, check the following:
 
-### ⚠️ Важно: База данных одна, но на проде не работает
+### ⚠️ Important: Same database, but production is broken
 
-Если база данных одна и та же (и для локалки, и для прода), и на локалке все работает, но на проде после последнего деплоя перестало работать, то проблема скорее всего в:
+If the database is the same for local and production, local works, but production stopped working after the last deploy, the cause is likely:
 
-1. **Переменных окружения на Vercel** - они могли сброситься или не примениться после деплоя
-2. **Кэшировании** - старый билд мог закэшироваться
-3. **Изменениях в коде** - новые проверки могли выявить проблему, которая была и раньше
+1. **Vercel environment variables** — They may have been reset or not applied after deploy
+2. **Caching** — An old build may be cached
+3. **Code changes** — New checks may have exposed an existing issue
 
-### 1. ✅ Переменные окружения на Vercel (ПРИОРИТЕТ #1)
+### 1. ✅ Environment variables on Vercel (PRIORITY #1)
 
-**Это самая частая причина проблемы!** После деплоя переменные окружения могут не примениться.
+**This is the most common cause!** After deploy, environment variables may not be applied.
 
-1. Откройте проект в Vercel Dashboard
-2. Перейдите в **Settings** → **Environment Variables**
-3. **Проверьте, что переменные есть и правильно заполнены:**
-   - `NEXT_PUBLIC_SUPABASE_URL` - должен быть полный URL (например: `https://xxxxx.supabase.co`)
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - должен быть длинный JWT токен (начинается с `eyJ`)
+1. Open your project in Vercel Dashboard
+2. Go to **Settings** → **Environment Variables**
+3. **Verify that variables exist and are set correctly:**
+   - `NEXT_PUBLIC_SUPABASE_URL` — Full URL (e.g. `https://xxxxx.supabase.co`)
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Long JWT token (starts with `eyJ`)
 
-4. **Проверьте Environment:**
-   - Убедитесь, что переменные добавлены для окружения **Production** (и **Preview**, если нужно)
-   - Переменные должны быть видны для всех окружений или хотя бы для Production
+4. **Check Environment:**
+   - Ensure variables are set for **Production** (and **Preview** if needed)
+   - Variables should be available for all environments or at least Production
 
-5. **Важно:** После проверки/изменения переменных:
-   - **Обязательно передеплойте проект** (Redeploy)
-   - Vercel может использовать старый билд с кэшированными переменными
+5. **Important:** After checking or changing variables:
+   - **Redeploy the project** (Redeploy)
+   - Vercel may use an old build with cached variables
 
-**Как получить значения (если нужно перепроверить):**
-- Откройте ваш проект в Supabase Dashboard
-- Перейдите в **Settings** → **API**
-- Скопируйте:
-  - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL` (можно с или без `https://` - код автоматически добавит)
-  - **anon public** ключ → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+**How to get the values (if you need to double-check):**
+- Open your project in Supabase Dashboard
+- Go to **Settings** → **API**
+- Copy:
+  - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL` (with or without `https://` — code will add it automatically)
+  - **anon public** key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-**Важно о формате URL:**
-- URL может быть с протоколом: `https://wvlldvaibndedmerjssj.supabase.co`
-- Или без протокола: `wvlldvaibndedmerjssj.supabase.co` (код автоматически добавит `https://`)
-- Оба варианта работают благодаря автоматической нормализации
+**URL format:**
+- URL can include protocol: `https://wvlldvaibndedmerjssj.supabase.co`
+- Or without protocol: `wvlldvaibndedmerjssj.supabase.co` (code will add `https://` automatically)
+- Both work thanks to automatic normalization
 
-**Быстрая проверка:**
-- Откройте консоль браузера на проде (F12)
-- Проверьте ошибки:
-  - "Missing Supabase environment variables" → переменные не установлены
-  - "Invalid NEXT_PUBLIC_SUPABASE_URL format" → URL неправильный (но обычно код сам исправит)
-  - "Supabase URL missing protocol, automatically added https://" → это нормально, код исправил URL
+**Quick check:**
+- Open browser console on production (F12)
+- Check errors:
+  - "Missing Supabase environment variables" → Variables not set
+  - "Invalid NEXT_PUBLIC_SUPABASE_URL format" → Wrong URL (usually the code will fix it)
+  - "Supabase URL missing protocol, automatically added https://" → Normal, code fixed the URL
 
-### 2. ✅ Миграции базы данных
+### 2. ✅ Database migrations
 
-Убедитесь, что миграции применены в Supabase:
+Ensure migrations are applied in Supabase:
 
-1. Откройте Supabase Dashboard
-2. Перейдите в **SQL Editor**
-3. Выполните миграции в следующем порядке:
+1. Open Supabase Dashboard
+2. Go to **SQL Editor**
+3. Run migrations in this order:
 
-**Шаг 1:** Выполните `supabase/migrations/0001_init.sql`
+**Step 1:** Run `supabase/migrations/0001_init.sql`
 ```sql
--- Создание таблиц и RLS политик
--- (весь файл 0001_init.sql)
+-- Create tables and RLS policies
+-- (full 0001_init.sql file)
 ```
 
-**Шаг 2:** Выполните `supabase/migrations/0003_seed_full_body_template.sql`
+**Step 2:** Run `supabase/migrations/0003_seed_full_body_template.sql`
 ```sql
--- Добавление тестовых данных
--- (весь файл 0003_seed_full_body_template.sql)
+-- Seed initial data
+-- (full 0003_seed_full_body_template.sql file)
 ```
 
-**Проверка:** После выполнения миграций, проверьте что таблицы созданы:
+**Verify:** After running migrations, check that tables exist:
 ```sql
 SELECT * FROM workout_templates;
--- Должна вернуться хотя бы одна запись "Full Body A"
+-- Should return at least one row "Full Body A"
 ```
 
-### 3. ✅ Row Level Security (RLS) политики
+### 3. ✅ Row Level Security (RLS) policies
 
-Убедитесь, что RLS политики настроены правильно:
+Ensure RLS policies are configured correctly:
 
-1. В Supabase Dashboard перейдите в **Authentication** → **Policies**
-2. Для каждой таблицы должна быть политика "allow all":
+1. In Supabase Dashboard go to **Authentication** → **Policies**
+2. Each table should have an "allow all" policy:
    - `workout_templates`
    - `workout_template_exercises`
    - `workouts`
    - `exercises`
    - `sets`
 
-**Или выполните SQL:**
+**Or run SQL:**
 ```sql
--- Проверка RLS политик
+-- Check RLS policies
 SELECT tablename, policyname 
 FROM pg_policies 
 WHERE schemaname = 'public' 
   AND tablename IN ('workout_templates', 'workout_template_exercises', 'workouts', 'exercises', 'sets');
 ```
 
-### 4. ✅ Проверка подключения
+### 4. ✅ Connection check
 
-Проверьте, что приложение может подключиться к Supabase:
+Verify the app can connect to Supabase:
 
-1. Откройте консоль браузера (F12)
-2. Перейдите на вкладку **Network**
-3. Обновите страницу
-4. Найдите запросы к Supabase (должны быть запросы к `*.supabase.co`)
-5. Проверьте статус ответов:
-   - **200** - OK
-   - **401/403** - Проблема с аутентификацией/RLS
-   - **404** - Таблица не найдена (миграции не применены)
+1. Open browser console (F12)
+2. Go to **Network** tab
+3. Refresh the page
+4. Find requests to Supabase (requests to `*.supabase.co`)
+5. Check response status:
+   - **200** — OK
+   - **401/403** — Authentication/RLS issue
+   - **404** — Table not found (migrations not applied)
 
-### 5. 🔍 Детальная диагностика
+### 5. 🔍 Detailed diagnostics
 
-Если проблема сохраняется, проверьте логи:
+If the issue persists, check logs:
 
-**В Vercel:**
-1. Откройте проект в Vercel Dashboard
-2. Перейдите в **Deployments**
-3. Откройте последний деплой
-4. Проверьте **Function Logs** на наличие ошибок
+**In Vercel:**
+1. Open project in Vercel Dashboard
+2. Go to **Deployments**
+3. Open the latest deployment
+4. Check **Function Logs** for errors
 
-**В браузере:**
-1. Откройте консоль разработчика (F12)
-2. Проверьте ошибки в консоли
-3. Улучшенная обработка ошибок теперь покажет более детальные сообщения:
-   - "Table not found" → Миграции не применены
-   - "Permission denied" → Проблема с RLS политиками
-   - "Connection error" → Проблема с сетью или URL
-   - "Configuration error" → Проблема с переменными окружения
+**In browser:**
+1. Open developer console (F12)
+2. Check console errors
+3. Improved error handling now shows more specific messages:
+   - "Table not found" → Migrations not applied
+   - "Permission denied" → RLS policy issue
+   - "Connection error" → Network or URL issue
+   - "Configuration error" → Environment variables issue
 
-### 6. 🚀 Быстрое решение
+### 6. 🚀 Quick fix
 
-Если нужно быстро проверить подключение:
+To quickly verify the connection:
 
-1. **Проверьте переменные окружения:**
+1. **Check environment variables:**
    ```bash
-   # В Vercel Dashboard проверьте что переменные установлены
+   # In Vercel Dashboard verify variables are set
    NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
    ```
 
-2. **Проверьте миграции:**
+2. **Check migrations:**
    ```sql
-   -- В Supabase SQL Editor выполните:
+   -- In Supabase SQL Editor run:
    SELECT COUNT(*) FROM workout_templates;
-   -- Должно вернуть > 0
+   -- Should return > 0
    ```
 
-3. **Передеплойте проект:**
-   - В Vercel Dashboard нажмите **Redeploy**
+3. **Redeploy the project:**
+   - In Vercel Dashboard click **Redeploy**
 
-### 7. 🔍 Диагностика через консоль браузера
+### 7. 🔍 Browser console diagnostics
 
-После последнего обновления кода, ошибки теперь более информативны:
+With the latest code, errors are more informative:
 
-1. Откройте сайт на проде
-2. Откройте консоль браузера (F12 → Console)
-3. Найдите ошибки и проверьте сообщения:
+1. Open the site in production
+2. Open browser console (F12 → Console)
+3. Find errors and check messages:
 
 **"Missing Supabase environment variables"**
-→ Переменные окружения не установлены на Vercel
+→ Environment variables not set on Vercel
 
 **"Invalid NEXT_PUBLIC_SUPABASE_URL format"**
-→ URL неправильного формата
+→ Wrong URL format
 
-**"Table not found" или "relation does not exist"**
-→ Миграции не применены (но вы сказали, что база одна, так что это маловероятно)
+**"Table not found" or "relation does not exist"**
+→ Migrations not applied (unlikely if you use the same DB)
 
-**"Permission denied" или "Row Level Security policy violation"**
-→ Проблема с RLS политиками
+**"Permission denied" or "Row Level Security policy violation"**
+→ RLS policy issue
 
 **"Connection error"**
-→ Проблема с сетью или URL недоступен
+→ Network or URL unreachable
 
-4. Также проверьте вкладку **Network**:
-   - Найдите запросы к Supabase (должны быть к `*.supabase.co`)
-   - Проверьте статус: 200 = OK, 401/403 = проблема с доступом, 404 = таблица не найдена
+4. Also check the **Network** tab:
+   - Find requests to Supabase (to `*.supabase.co`)
+   - Check status: 200 = OK, 401/403 = access issue, 404 = table not found
 
-### 8. 📞 Дополнительная помощь
+### 8. 📞 Further help
 
-Если проблема не решена:
+If the issue is not resolved:
 
-1. **Проверьте логи Vercel:**
-   - Vercel Dashboard → Deployments → последний деплой → Function Logs
-   - Ищите ошибки при инициализации Supabase клиента
+1. **Check Vercel logs:**
+   - Vercel Dashboard → Deployments → latest deploy → Function Logs
+   - Look for Supabase client initialization errors
 
-2. **Проверьте логи Supabase:**
+2. **Check Supabase logs:**
    - Supabase Dashboard → Logs → API Logs
-   - Проверьте, приходят ли запросы с прода
+   - Verify that requests are coming from production
 
-3. **Временное решение для отладки:**
-   - Добавьте переменную `NEXT_PUBLIC_DEBUG=true` в Vercel
-   - Передеплойте
-   - В консоли браузера появятся детальные логи инициализации Supabase
+3. **Temporary debug option:**
+   - Add `NEXT_PUBLIC_DEBUG=true` in Vercel
+   - Redeploy
+   - Detailed Supabase initialization logs will appear in the browser console
 
-4. Убедитесь, что используете правильный проект Supabase
-5. Проверьте, что RLS политики разрешают анонимный доступ
+4. Ensure you are using the correct Supabase project
+5. Verify RLS policies allow anonymous access
 
 ---
 
-## Частые ошибки и решения
+## Common errors and solutions
 
 ### "Missing Supabase environment variables"
-**Решение:** Добавьте переменные окружения в Vercel и передеплойте
+**Solution:** Add environment variables in Vercel and redeploy
 
-### "Table not found" или "relation does not exist"
-**Решение:** Примените миграции в Supabase SQL Editor
+### "Table not found" or "relation does not exist"
+**Solution:** Apply migrations in Supabase SQL Editor
 
-### "Permission denied" или "Row Level Security policy violation"
-**Решение:** Проверьте RLS политики - должны быть "allow all" для всех таблиц
+### "Permission denied" or "Row Level Security policy violation"
+**Solution:** Check RLS policies — should be "allow all" for all tables
 
 ### "Connection error"
-**Решение:** Проверьте правильность `NEXT_PUBLIC_SUPABASE_URL`
+**Solution:** Verify `NEXT_PUBLIC_SUPABASE_URL` is correct
