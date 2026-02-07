@@ -2,33 +2,14 @@
  * Security validation utilities
  */
 
-import type { UUID, DateString } from "../types/common";
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUUID, type UUID } from "../types/common";
 
 /**
  * Validates UUID format
  */
 export function isValidUUID(value: string | null | undefined): value is UUID {
   if (!value) return false;
-  return UUID_REGEX.test(value);
-}
-
-/**
- * Validates date format (YYYY-MM-DD)
- */
-export function isValidDate(dateString: string): dateString is DateString {
-  if (!dateString || typeof dateString !== "string") return false;
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(dateString)) return false;
-
-  const date = new Date(dateString);
-  return (
-    date instanceof Date &&
-    !isNaN(date.getTime()) &&
-    date.toISOString().slice(0, 10) === dateString
-  );
+  return isUUID(value);
 }
 
 /**

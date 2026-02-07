@@ -21,43 +21,37 @@ export function handleSupabaseError(
 
   const message = error.message.toLowerCase();
   const code = error.code;
+  const isDevelopment = process.env.NODE_ENV === "development";
 
   // Provide more specific error messages based on error type
   if (message.includes("row-level security") || message.includes("policy") || code === "42501") {
-    throw new Error(
-      `${defaultMessage} Row Level Security policy violation. Please check database policies.`
-    );
+    throw new Error("Action is not available right now.");
   }
 
   if (message.includes("relation") || message.includes("does not exist") || code === "42P01") {
-    throw new Error(
-      `${defaultMessage} Table not found. Please ensure database migrations are applied.`
-    );
+    throw new Error("Service is temporarily unavailable.");
   }
 
   if (message.includes("permission denied") || code === "42501") {
-    throw new Error(
-      `${defaultMessage} Permission denied. Please check database access policies.`
-    );
+    throw new Error("Action is not available right now.");
   }
 
   if (message.includes("violates")) {
-    throw new Error(`${defaultMessage} Data validation failed.`);
+    throw new Error("Invalid data.");
   }
 
   if (message.includes("duplicate")) {
-    throw new Error(`${defaultMessage} Duplicate entry.`);
+    throw new Error("Duplicate entry.");
   }
 
   if (message.includes("foreign key")) {
-    throw new Error(`${defaultMessage} Invalid reference.`);
+    throw new Error("Invalid reference.");
   }
 
-  // In production, sanitize error message to prevent information leakage
-  // In development, show more details
-  const sanitized = process.env.NODE_ENV === "development"
-    ? error.message.substring(0, 300)
-    : error.message.substring(0, 100).replace(/[<>]/g, "");
+  // Avoid leaking backend details in production.
+  if (isDevelopment) {
+    throw new Error(`${defaultMessage} ${error.message.substring(0, 300)}`);
+  }
 
-  throw new Error(`${defaultMessage}${sanitized ? `: ${sanitized}` : ""}`);
+  throw new Error(defaultMessage);
 }

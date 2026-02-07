@@ -156,13 +156,14 @@ export default function Select({
 
   // Focus management
   useEffect(() => {
-    if (isOpen && selectedIndex >= 0) {
-      setFocusedIndex(selectedIndex);
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        optionRefs.current.get(selectedIndex)?.focus();
-      }, 0);
-    }
+    if (!isOpen) return;
+    const indexToFocus = selectedIndex >= 0 ? selectedIndex : 0;
+    const timer = window.setTimeout(() => {
+      optionRefs.current.get(indexToFocus)?.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [isOpen, selectedIndex]);
 
   const handleButtonClick = useCallback(() => {

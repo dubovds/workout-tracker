@@ -5,7 +5,6 @@ import type { ExerciseEntry } from "../types/workout";
 import {
   isValidUUID,
   isValidArrayLength,
-  isValidDate,
   isValidNumber,
 } from "../utils/validation";
 import type { UUID, DateString } from "../types/common";
@@ -188,7 +187,7 @@ export class WorkoutService {
       throw new Error("Invalid template ID format.");
     }
 
-    for (const [_, templateExerciseId] of templateExerciseMap) {
+    for (const [, templateExerciseId] of templateExerciseMap) {
       if (!isValidUUID(templateExerciseId)) {
         throw new Error("Invalid template exercise ID format.");
       }

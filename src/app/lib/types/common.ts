@@ -51,25 +51,3 @@ export function assertDateString(value: string): DateString {
   }
   return value as DateString;
 }
-
-/**
- * Utility type to make all properties optional except specified ones
- */
-export type RequireFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
-
-/**
- * Utility type for non-empty array
- */
-export type NonEmptyArray<T> = [T, ...T[]];
-
-/**
- * Utility type to extract array element type
- */
-export type ArrayElement<T> = T extends ReadonlyArray<infer U> ? U : never;
-
-/**
- * Utility type for readonly deep
- */
-export type DeepReadonly<T> = {
-  readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
-};
