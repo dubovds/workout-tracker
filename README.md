@@ -34,6 +34,15 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
+Optional (recommended for single-user deployed mode):
+
+```env
+SITE_USERNAME=admin
+SITE_PASSWORD=your_strong_password
+```
+
+When `SITE_PASSWORD` is set, the app is protected by HTTP Basic Auth.
+
 ### Database Migrations
 
 ```bash
@@ -137,6 +146,8 @@ The project follows the **Service Layer Pattern**:
 2. Add environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL` — Your Supabase project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Anon/Public key from Supabase
+   - `SITE_USERNAME` — Basic Auth username (optional, default: `admin`)
+   - `SITE_PASSWORD` — Basic Auth password (recommended for private single-user use)
 3. **Important:** Apply database migrations in Supabase Dashboard (SQL Editor):
    - Run `supabase/migrations/0001_init.sql`
    - Run `supabase/migrations/0003_seed_full_body_template.sql`

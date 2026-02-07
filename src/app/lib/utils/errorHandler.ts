@@ -24,7 +24,7 @@ export function getErrorMessage(error: unknown, defaultMessage: string): string 
     
     // RLS (Row Level Security) errors
     if (message.includes("row-level security") || message.includes("policy") || message.includes("permission")) {
-      return "Permission denied. Please check database policies.";
+      return "Action is not available right now.";
     }
     
     // Missing environment variables
@@ -34,11 +34,11 @@ export function getErrorMessage(error: unknown, defaultMessage: string): string 
     
     // Table not found
     if (message.includes("relation") || message.includes("does not exist") || message.includes("table")) {
-      return "Database error. Tables may not be initialized. Please run migrations.";
+      return "Service is temporarily unavailable. Please try again later.";
     }
     
-    // Return sanitized error message (first 100 chars) in production
-    return `${defaultMessage} (${error.message.substring(0, 100)})`;
+    // Don't expose raw backend/internal messages in production
+    return defaultMessage;
   }
   
   return defaultMessage;

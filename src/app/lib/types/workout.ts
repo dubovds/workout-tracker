@@ -6,18 +6,6 @@
 import type { UUID } from "./common";
 
 /**
- * UI model for a set (runtime only).
- * isCompleted is not persisted to DB and resets on page reload.
- * Completed set = locked set: weight/reps become readOnly until user unchecks.
- */
-export type WorkoutSetUI = {
-  id: string;
-  weight: number;
-  reps: number;
-  isCompleted: boolean;
-};
-
-/**
  * Base set data structure.
  * `done` is the UI-only "set completed" flag (alias for isCompleted); not saved to DB.
  */

@@ -1,135 +1,87 @@
 import { getSupabaseClient } from "./supabase";
 import { normalizeExerciseName } from "./utils";
 
-type ExerciseWeights = Readonly<{
+export type ExerciseWeights = Readonly<{
   workingWeight: number | null;
   maxWeight: number | null;
   lastReps: number | null;
 }>;
 
-type ExerciseRecord = Readonly<{
-  id: string;
-  name: string;
-  created_at: string;
-}>;
-
-type ExerciseSetJoin = Readonly<{
-  weight: number;
-  reps: number;
-  created_at: string;
-  exercises: ExerciseRecord;
-}>;
-
-const EMPTY_WEIGHTS: ExerciseWeights = {
-  workingWeight: null,
-  maxWeight: null,
-  lastReps: null,
+type WeightsBatchRow = {
+  exercise_name: string;
+  working_weight: number | null;
+  max_weight: number | null;
+  last_reps: number | null;
 };
 
-export async function getLastExerciseWeights(
-  exerciseName: string
-): Promise<ExerciseWeights> {
-  // Validate input
-  if (!exerciseName || typeof exerciseName !== "string") {
-    return EMPTY_WEIGHTS;
+function isWeightsBatchRow(value: unknown): value is WeightsBatchRow {
+  if (!value || typeof value !== "object") {
+    return false;
   }
 
-  const normalizedName = normalizeExerciseName(exerciseName);
-  
-  // Additional validation after normalization
-  if (!normalizedName || normalizedName.length === 0) {
-    return EMPTY_WEIGHTS;
+  const row = value as Record<string, unknown>;
+  const hasStringName = typeof row.exercise_name === "string";
+  const hasValidWorkingWeight =
+    row.working_weight === null || row.working_weight === undefined || Number.isFinite(Number(row.working_weight));
+  const hasValidMaxWeight =
+    row.max_weight === null || row.max_weight === undefined || Number.isFinite(Number(row.max_weight));
+  const hasValidLastReps =
+    row.last_reps === null || row.last_reps === undefined || Number.isFinite(Number(row.last_reps));
+
+  return hasStringName && hasValidWorkingWeight && hasValidMaxWeight && hasValidLastReps;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+export async function getLastExerciseWeightsBatch(
+  exerciseNames: ReadonlyArray<string>
+): Promise<Record<string, ExerciseWeights>> {
+  const normalizedNames = Array.from(
+    new Set(
+      exerciseNames
+        .map((name) => normalizeExerciseName(name))
+        .filter((name) => name.length > 0)
+    )
+  );
+
+  if (normalizedNames.length === 0) {
+    return {};
   }
 
   const supabase = getSupabaseClient();
-
-  const { data, error } = await supabase
-    .from("sets")
-    .select("weight,reps,created_at,exercises!inner(id,name,created_at)")
-    .ilike("exercises.name", normalizedName);
+  const { data, error } = await supabase.rpc("get_last_exercise_weights_batch", {
+    p_exercise_names: normalizedNames,
+  });
 
   if (error) {
-    throw new Error(error.message ?? "Failed to load exercise sets.");
+    throw new Error(error.message ?? "Failed to load exercise weights.");
   }
 
-  if (!data || data.length === 0) {
-    return EMPTY_WEIGHTS;
-  }
-
-  // Type-safe assertion after validation
   if (!Array.isArray(data)) {
-    return EMPTY_WEIGHTS;
+    throw new Error("Unexpected response format while loading exercise weights.");
   }
-  
-  // Type-safe conversion with proper typing
-  const rows: ExerciseSetJoin[] = data.map((row) => {
-    // Supabase returns exercises as array, but we expect single object
-    const exerciseData = Array.isArray(row.exercises) ? row.exercises[0] : row.exercises;
-    return {
-      weight: Number(row.weight),
-      reps: Number(row.reps),
-      created_at: String(row.created_at),
-      exercises: {
-        id: String(exerciseData?.id ?? ""),
-        name: String(exerciseData?.name ?? ""),
-        created_at: String(exerciseData?.created_at ?? ""),
-      },
+
+  const rows = data.filter(isWeightsBatchRow);
+  if (rows.length !== data.length) {
+    throw new Error("Unexpected row format while loading exercise weights.");
+  }
+  const byName: Record<string, ExerciseWeights> = {};
+
+  for (const row of rows) {
+    const normalizedName = normalizeExerciseName(String(row.exercise_name ?? ""));
+    if (!normalizedName) continue;
+    byName[normalizedName] = {
+      workingWeight: toNullableNumber(row.working_weight),
+      maxWeight: toNullableNumber(row.max_weight),
+      lastReps: toNullableNumber(row.last_reps),
     };
-  });
-
-  const latestExercise = rows.reduce<ExerciseRecord | null>((latest, row) => {
-    const exercise = row.exercises;
-    if (!latest) {
-      return exercise;
-    }
-    const latestDate = new Date(latest.created_at);
-    const rowDate = new Date(exercise.created_at);
-    return rowDate > latestDate ? exercise : latest;
-  }, null);
-
-  if (!latestExercise) {
-    return EMPTY_WEIGHTS;
   }
 
-  const latestSets = rows.filter((row) => {
-    return row.exercises.id === latestExercise.id;
-  });
-
-  if (latestSets.length === 0) {
-    return EMPTY_WEIGHTS;
-  }
-
-  const weights = latestSets.map((row) => Number(row.weight));
-  const frequency = new Map<number, number>();
-  weights.forEach((weight) => {
-    frequency.set(weight, (frequency.get(weight) ?? 0) + 1);
-  });
-
-  // Find most frequently used weight (working weight)
-  let mostFrequentWeight = weights[0];
-  let maxFrequency = 0;
-  frequency.forEach((count, weight) => {
-    if (count > maxFrequency || (count === maxFrequency && weight > mostFrequentWeight)) {
-      mostFrequentWeight = weight;
-      maxFrequency = count;
-    }
-  });
-
-  // Safe max calculation - handle empty array case
-  const maxWeight = weights.length > 0 ? Math.max(...weights) : 0;
-  const lastSet = latestSets.reduce<ExerciseSetJoin | null>((latest, row) => {
-    if (!latest) {
-      return row;
-    }
-    return new Date(row.created_at) > new Date(latest.created_at)
-      ? row
-      : latest;
-  }, null);
-  const lastReps = lastSet ? Number(lastSet.reps) : null;
-
-  return { 
-    workingWeight: mostFrequentWeight, 
-    maxWeight, 
-    lastReps 
-  };
+  return byName;
 }

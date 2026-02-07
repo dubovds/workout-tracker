@@ -20,75 +20,30 @@ export type WorkoutPayload = {
  */
 export async function saveWorkout(workout: WorkoutPayload): Promise<UUID> {
   const supabase = getSupabaseClient();
-  const { data: workoutRow, error: workoutError } = await supabase
-    .from("workouts")
-    .insert({
-      date: workout.date,
-      template_id: workout.templateId || null,
-    })
-    .select("id")
-    .single();
-
-  if (workoutError || !workoutRow) {
-    handleSupabaseError(workoutError, "Failed to create workout.");
-    // handleSupabaseError throws, but TypeScript doesn't know that
-    throw new Error("Failed to create workout."); // Unreachable, but satisfies type checker
-  }
-
-  const workoutId = assertUUID(workoutRow.id);
-
-  const exercisesWithSets = workout.exercises.filter(
-    (exercise) => exercise.sets.length > 0
-  );
-
-  if (exercisesWithSets.length === 0) {
-    return workoutId;
-  }
-
-  const exercisesToInsert = exercisesWithSets.map((exercise) => ({
-    workout_id: workoutId,
-    template_exercise_id: exercise.templateExerciseId || null,
+  const exercisesPayload = workout.exercises.map((exercise) => ({
     name: normalizeExerciseName(exercise.name),
+    templateExerciseId: exercise.templateExerciseId ?? null,
+    sets: exercise.sets.map((set) => ({
+      weight: set.weight,
+      reps: set.reps,
+    })),
   }));
 
-  const { data: exerciseRows, error: exercisesError } = await supabase
-    .from("exercises")
-    .insert(exercisesToInsert)
-    .select("id");
+  const { data: workoutId, error } = await supabase.rpc("save_workout_atomic", {
+    p_date: workout.date,
+    p_template_id: workout.templateId ?? null,
+    p_exercises: exercisesPayload,
+  });
 
-  if (exercisesError || !exerciseRows) {
-    handleSupabaseError(exercisesError, "Failed to create exercises.");
+  if (error || !workoutId) {
+    handleSupabaseError(error, "Failed to save workout.");
     // handleSupabaseError throws, but TypeScript doesn't know that
-    throw new Error("Failed to create exercises."); // Unreachable, but satisfies type checker
+    throw new Error("Failed to save workout."); // Unreachable, but satisfies type checker
   }
 
-  // Optimized: use for loop instead of flatMap to avoid intermediate arrays
-  const setsToInsert: Array<{ exercise_id: UUID; weight: number; reps: number }> = [];
-  for (let i = 0; i < exercisesWithSets.length; i++) {
-    const exercise = exercisesWithSets[i];
-    const exerciseRow = exerciseRows[i];
-    if (!exerciseRow) {
-      continue; // Skip if row is missing
-    }
-    const exerciseId = assertUUID(exerciseRow.id);
-    for (const set of exercise.sets) {
-      setsToInsert.push({
-        exercise_id: exerciseId,
-        weight: set.weight,
-        reps: set.reps,
-      });
-    }
+  if (typeof workoutId !== "string") {
+    throw new Error("Failed to save workout.");
   }
 
-  if (setsToInsert.length > 0) {
-    const { error: setsError } = await supabase
-      .from("sets")
-      .insert(setsToInsert);
-
-    if (setsError) {
-      handleSupabaseError(setsError, "Failed to create sets.");
-    }
-  }
-
-  return workoutId;
+  return assertUUID(workoutId);
 }

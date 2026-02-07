@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SetRow from "./SetRow";
-import { getLastExerciseWeights } from "../lib/getLastExerciseWeights";
-import { WORKOUT_CONSTANTS } from "../lib/constants";
+import {
+  getLastExerciseWeightsBatch,
+  type ExerciseWeights,
+} from "../lib/getLastExerciseWeights";
+import { normalizeExerciseName } from "../lib/utils";
 import type { SetEntry, ExerciseEntry } from "../lib/types/workout";
 
 // Re-export types for backward compatibility
@@ -40,6 +43,12 @@ const formatWeightSummary = (
   return `${workingWeight} / ${maxWeight} kg`;
 };
 
+const EMPTY_WEIGHTS: ExerciseWeights = {
+  workingWeight: null,
+  maxWeight: null,
+  lastReps: null,
+};
+
 export default function ExerciseAccordion({
   exercises,
   focusSetId,
@@ -64,18 +73,7 @@ export default function ExerciseAccordion({
       { workingWeight: number | null; maxWeight: number | null; lastReps: number | null }
     >
   >({});
-  const [loadingWeights, setLoadingWeights] = useState<Record<string, boolean>>(
-    {}
-  );
-  const rowRefs = useRef<Record<string, HTMLElement | null>>({});
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const activeRequestsRef = useRef<Set<string>>(new Set());
-  const weightCacheRef = useRef<
-    Record<
-      string,
-      { workingWeight: number | null; maxWeight: number | null; lastReps: number | null }
-    >
-  >({});
+  const [isLoadingWeights, setIsLoadingWeights] = useState(false);
 
   // Memoize weight summaries for all exercises to avoid recalculating on every render
   const weightSummaries = useMemo(() => {
@@ -89,41 +87,47 @@ export default function ExerciseAccordion({
     return summaries;
   }, [exercises, weightCache]);
 
-  const loadWeights = useCallback(
-    async (exerciseId: string, exerciseName: string) => {
-      // Check cache and active requests using refs to avoid stale closure
-      if (
-        weightCacheRef.current[exerciseId] ||
-        activeRequestsRef.current.has(exerciseId)
-      ) {
-        return;
-      }
+  useEffect(() => {
+    if (exercises.length === 0) {
+      setWeightCache({});
+      setIsLoadingWeights(false);
+      return;
+    }
 
-      activeRequestsRef.current.add(exerciseId);
-      setLoadingWeights((prev) => ({ ...prev, [exerciseId]: true }));
-      
+    let cancelled = false;
+    const exerciseNames = exercises.map((exercise) => exercise.name);
+
+    const loadBatch = async () => {
+      setIsLoadingWeights(true);
       try {
-        const weights = await getLastExerciseWeights(exerciseName);
-        weightCacheRef.current[exerciseId] = weights;
-        setWeightCache((prev) => ({ ...prev, [exerciseId]: weights }));
-      } catch (error) {
-        // Silently handle errors - don't expose internal details
-        // In production, log to monitoring service instead of console
-        // Development logging removed for production readiness
-        const emptyWeights = {
-          workingWeight: null,
-          maxWeight: null,
-          lastReps: null,
-        };
-        weightCacheRef.current[exerciseId] = emptyWeights;
-        setWeightCache((prev) => ({ ...prev, [exerciseId]: emptyWeights }));
+        const byName = await getLastExerciseWeightsBatch(exerciseNames);
+        if (cancelled) return;
+
+        const nextCache: Record<string, ExerciseWeights> = {};
+        for (const exercise of exercises) {
+          const normalizedName = normalizeExerciseName(exercise.name);
+          nextCache[exercise.id] = byName[normalizedName] ?? EMPTY_WEIGHTS;
+        }
+        setWeightCache(nextCache);
+      } catch {
+        if (cancelled) return;
+        const fallbackCache: Record<string, ExerciseWeights> = {};
+        for (const exercise of exercises) {
+          fallbackCache[exercise.id] = EMPTY_WEIGHTS;
+        }
+        setWeightCache(fallbackCache);
       } finally {
-        activeRequestsRef.current.delete(exerciseId);
-        setLoadingWeights((prev) => ({ ...prev, [exerciseId]: false }));
+        if (!cancelled) {
+          setIsLoadingWeights(false);
+        }
       }
-    },
-    []
-  );
+    };
+
+    void loadBatch();
+    return () => {
+      cancelled = true;
+    };
+  }, [exercises]);
 
   useEffect(() => {
     if (!openExerciseId) return;
@@ -140,55 +144,6 @@ export default function ExerciseAccordion({
       cached.lastReps ?? undefined
     );
   }, [openExerciseId, exercises, weightCache, onAddSet]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    // Disconnect previous observer if exists
-    const previousObserver = observerRef.current;
-    if (previousObserver) {
-      previousObserver.disconnect();
-    }
-
-    // Create new observer
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            return;
-          }
-          const target = entry.target as HTMLElement;
-          const exerciseId = target.dataset.exerciseId;
-          const exerciseName = target.dataset.exerciseName;
-          if (!exerciseId || !exerciseName) {
-            return;
-          }
-          void loadWeights(exerciseId, exerciseName);
-        });
-      },
-      { 
-        rootMargin: WORKOUT_CONSTANTS.INTERSECTION_OBSERVER_ROOT_MARGIN, 
-        threshold: WORKOUT_CONSTANTS.INTERSECTION_OBSERVER_THRESHOLD 
-      }
-    );
-
-    observerRef.current = observer;
-
-    // Observe all current exercise nodes
-    Object.values(rowRefs.current).forEach((node) => {
-      if (node) {
-        observer.observe(node);
-      }
-    });
-
-    // Cleanup: disconnect observer on unmount or when dependencies change
-    return () => {
-      observer.disconnect();
-      observerRef.current = null;
-    };
-  }, [exercises, loadWeights]);
 
   return (
     <section className="divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
@@ -210,11 +165,6 @@ export default function ExerciseAccordion({
         return (
           <article
             key={exercise.id}
-            ref={(node) => {
-              rowRefs.current[exercise.id] = node;
-            }}
-            data-exercise-id={exercise.id}
-            data-exercise-name={exercise.name}
             className="bg-white/80 px-2 py-4 backdrop-blur dark:bg-zinc-900/70"
           >
             <button
@@ -222,9 +172,6 @@ export default function ExerciseAccordion({
               onClick={() => {
                 const nextIsOpen = !isOpen;
                 setOpenExerciseId(nextIsOpen ? exercise.id : null);
-                if (nextIsOpen) {
-                  void loadWeights(exercise.id, exercise.name);
-                }
               }}
               aria-expanded={isOpen}
               className="grid w-full grid-cols-[1fr_auto] items-start gap-3 text-left sm:grid-cols-[1fr_auto_auto] sm:items-center"
@@ -237,11 +184,11 @@ export default function ExerciseAccordion({
                   {exercise.name}
                 </h3>
                 <span className="mt-2 text-xs font-bold text-zinc-500 dark:text-zinc-300 sm:hidden">
-                  {loadingWeights[exercise.id] ? "Loading..." : summary}
+                  {isLoadingWeights ? "Loading..." : summary}
                 </span>
               </div>
               <span className="hidden text-xs font-bold text-zinc-500 dark:text-zinc-300 sm:inline-flex sm:justify-self-end">
-                {loadingWeights[exercise.id] ? "Loading..." : summary}
+                {isLoadingWeights ? "Loading..." : summary}
               </span>
               <span
                 className={`flex h-8 w-8 items-center justify-center justify-self-end rounded-full border border-zinc-200 text-zinc-400 transition-transform duration-200 dark:border-zinc-700 dark:text-zinc-300 sm:h-9 sm:w-9 ${
